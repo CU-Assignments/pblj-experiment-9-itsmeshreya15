@@ -1,0 +1,164 @@
+1. 
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC 
+  "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+  "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+  <session-factory>
+    <property name="hibernate.connection.driver_class">com.mysql.cj.jdbc.Driver</property>
+    <property name="hibernate.connection.url">jdbc:mysql://localhost:3306/your_database</property>
+    <property name="hibernate.connection.username">your_username</property>
+    <property name="hibernate.connection.password">your_password</property>
+    <property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
+    <property name="hibernate.hbm2ddl.auto">update</property>
+    <property name="show_sql">true</property>
+
+    <mapping class="Student"/>
+  </session-factory>
+</hibernate-configuration>
+
+
+
+2. 
+import javax.persistence.*;
+
+@Entity
+@Table(name = "students")
+public class Student {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
+
+    private String name;
+    private int age;
+
+    // Constructors
+    public Student() {}
+
+    public Student(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    // Getters and Setters
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public int getAge() { return age; }
+
+    public void setId(int id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setAge(int age) { this.age = age; }
+
+    @Override
+    public String toString() {
+        return "Student [id=" + id + ", name=" + name + ", age=" + age + "]";
+    }
+}
+
+
+
+
+3. 
+import org.hibernate.SessionFactory;
+import org.hibernate.cfg.Configuration;
+
+public class HibernateUtil {
+    private static final SessionFactory sessionFactory;
+
+    static {
+        try {
+            sessionFactory = new Configuration().configure().buildSessionFactory();
+        } catch (Throwable ex) {
+            throw new ExceptionInInitializerError(ex);
+        }
+    }
+
+    public static SessionFactory getSessionFactory() {
+        return sessionFactory;
+    }
+}
+
+
+
+4.
+import org.hibernate.*;
+import java.util.List;
+
+public class StudentDAO {
+
+    public void createStudent(Student student) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Transaction tx = session.beginTransaction();
+            session.save(student);
+            tx.commit();
+        }
+    }
+
+    public Student readStudent(int id) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.get(Student.class, id);
+        }
+    }
+
+    public void updateStudent(Student student) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Transaction tx = session.beginTransaction();
+            session.update(student);
+            tx.commit();
+        }
+    }
+
+    public void deleteStudent(int id) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Transaction tx = session.beginTransaction();
+            Student student = session.get(Student.class, id);
+            if (student != null) {
+                session.delete(student);
+            }
+            tx.commit();
+        }
+    }
+
+    public List<Student> listStudents() {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.createQuery("from Student", Student.class).list();
+        }
+    }
+}
+
+
+
+
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        StudentDAO dao = new StudentDAO();
+
+        // Create
+        Student s1 = new Student("Alice", 21);
+        dao.createStudent(s1);
+
+        // Read
+        Student s2 = dao.readStudent(s1.getId());
+        System.out.println("Read: " + s2);
+
+        // Update
+        s2.setAge(22);
+        dao.updateStudent(s2);
+        System.out.println("Updated: " + dao.readStudent(s2.getId()));
+
+        // List
+        List<Student> students = dao.listStudents();
+        System.out.println("All Students:");
+        for (Student s : students) {
+            System.out.println(s);
+        }
+
+        // Delete
+        dao.deleteStudent(s2.getId());
+        System.out.println("Deleted student with ID: " + s2.getId());
+    }
+}
